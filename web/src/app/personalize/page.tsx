@@ -1,5 +1,6 @@
 "use client";
 
+import { RequireAuth } from "@/presentation/components/require-auth";
 import { useSeniorEaseStore } from "@/presentation/store/seniorease-store";
 import { BigButton } from "@/presentation/components/big-button";
 import type {
@@ -22,7 +23,7 @@ const spacingOptions: { value: SpacingPreset; label: string }[] = [
   { value: "spacious", label: "Mais espaço" },
 ];
 
-export default function PersonalizePage() {
+function PersonalizePageContent() {
   const preferences = useSeniorEaseStore((s) => s.preferences);
   const setPreferences = useSeniorEaseStore((s) => s.setPreferences);
   const pushToast = useSeniorEaseStore((s) => s.pushToast);
@@ -193,5 +194,13 @@ export default function PersonalizePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function PersonalizePage() {
+  return (
+    <RequireAuth>
+      <PersonalizePageContent />
+    </RequireAuth>
   );
 }

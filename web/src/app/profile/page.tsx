@@ -1,5 +1,6 @@
 "use client";
 
+import { RequireAuth } from "@/presentation/components/require-auth";
 import { useSeniorEaseStore } from "@/presentation/store/seniorease-store";
 import { BigLink } from "@/presentation/components/big-button";
 
@@ -20,7 +21,7 @@ const labels: Record<string, string> = {
   system: "Seguir o sistema",
 };
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const preferences = useSeniorEaseStore((s) => s.preferences);
   const activeTasks = useSeniorEaseStore((s) => s.activeTasks);
   const completedTasks = useSeniorEaseStore((s) => s.completedTasks);
@@ -100,5 +101,13 @@ export default function ProfilePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <RequireAuth>
+      <ProfilePageContent />
+    </RequireAuth>
   );
 }
