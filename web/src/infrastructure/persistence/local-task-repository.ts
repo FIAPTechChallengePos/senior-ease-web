@@ -3,16 +3,26 @@ import type { TaskRepository } from "@/domain/repositories/task-repository";
 
 const KEY = "seniorease_tasks_v1";
 
-function isTaskArray(v: unknown): v is Task[] {
-  if (!Array.isArray(v)) return false;
-  return v.every(
-    (item) =>
-      typeof item === "object" &&
-      item !== null &&
-      typeof (item as Task).id === "string" &&
-      typeof (item as Task).title === "string" &&
-      typeof (item as Task).completed === "boolean"
-  );
+function normalizeTask(raw: unknown): Task | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.id !== "string" || typeof o.title !== "string" || typeof o.completed !== "boolean") {
+    return null;
+  }
+  return {
+    id: o.id,
+    title: o.title,
+    description: typeof o.description === "string" ? o.description : "",
+    completed: o.completed,
+    reminderAt: o.reminderAt === null || typeof o.reminderAt === "string" ? o.reminderAt : null,
+    createdAt: typeof o.createdAt === "string" ? o.createdAt : new Date().toISOString(),
+    completedAt: o.completedAt === null || typeof o.completedAt === "string" ? o.completedAt : null,
+  };
+}
+
+function parseTasks(raw: unknown): Task[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(normalizeTask).filter((t): t is Task => t !== null);
 }
 
 export class LocalTaskRepository implements TaskRepository {
@@ -35,7 +45,7 @@ export class LocalTaskRepository implements TaskRepository {
       const raw = window.localStorage.getItem(KEY);
       if (!raw) return [];
       const data = JSON.parse(raw) as unknown;
-      return isTaskArray(data) ? data : [];
+      return parseTasks(data);
     } catch {
       return [];
     }

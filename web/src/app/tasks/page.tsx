@@ -5,6 +5,38 @@ import { useSeniorEaseStore } from "@/presentation/store/seniorease-store";
 import { BigButton } from "@/presentation/components/big-button";
 import { ConfirmDialog } from "@/presentation/components/confirm-dialog";
 
+/** Converte data (yyyy-mm-dd) e hora (HH:mm) opcionais em ISO UTC, usando fuso local. Sem data e sem hora: null. Só hora: usa a data de hoje. Só data: meia-noite local. */
+function reminderAtFromParts(datePart: string, timePart: string): string | null {
+  const hasDate = datePart.trim() !== "";
+  const hasTime = timePart.trim() !== "";
+  if (!hasDate && !hasTime) return null;
+
+  const now = new Date();
+  let y: number;
+  let mo: number;
+  let d: number;
+  if (hasDate) {
+    const p = datePart.split("-").map(Number);
+    y = p[0];
+    mo = p[1];
+    d = p[2];
+  } else {
+    y = now.getFullYear();
+    mo = now.getMonth() + 1;
+    d = now.getDate();
+  }
+
+  let hh = 0;
+  let mm = 0;
+  if (hasTime) {
+    const t = timePart.split(":");
+    hh = Number(t[0]);
+    mm = Number(t[1] ?? 0);
+  }
+
+  return new Date(y, mo - 1, d, hh, mm, 0, 0).toISOString();
+}
+
 export default function TasksPage() {
   const activeTasks = useSeniorEaseStore((s) => s.activeTasks);
   const completedTasks = useSeniorEaseStore((s) => s.completedTasks);
@@ -18,7 +50,8 @@ export default function TasksPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [reminder, setReminder] = useState("");
+  const [reminderDate, setReminderDate] = useState("");
+  const [reminderTime, setReminderTime] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -38,12 +71,13 @@ export default function TasksPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const reminderAt = reminder ? new Date(reminder).toISOString() : null;
+    const reminderAt = reminderAtFromParts(reminderDate, reminderTime);
     const ok = addTask({ title, description, reminderAt });
     if (ok) {
       setTitle("");
       setDescription("");
-      setReminder("");
+      setReminderDate("");
+      setReminderTime("");
     }
   }
 
@@ -91,31 +125,51 @@ export default function TasksPage() {
               autoComplete="off"
             />
           </div>
-          <div className="advanced-only">
+          <div>
             <label htmlFor="task-desc" className="block text-a11y-base font-medium text-[var(--text)]">
-              Detalhes (opcional)
+              Passo a passo (opcional)
             </label>
             <textarea
               id="task-desc"
-              className="mt-2 min-h-[100px] w-full rounded-xl border-2 border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-a11y-base text-[var(--text)]"
+              placeholder="Descreva o passo a passo da tarefa..."
+              rows={5}
+              className="mt-2 min-h-[120px] w-full rounded-xl border-2 border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-a11y-base leading-relaxed text-[var(--text)] placeholder:text-[var(--text-muted)]"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <div>
-            <label htmlFor="task-reminder" className="block text-a11y-base font-medium text-[var(--text)]">
-              Lembrete (opcional) — data e hora
-            </label>
-            <input
-              id="task-reminder"
-              type="datetime-local"
-              className="mt-2 w-full max-w-md rounded-xl border-2 border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-a11y-base text-[var(--text)]"
-              value={reminder}
-              onChange={(e) => setReminder(e.target.value)}
-            />
-            <p className="mt-1 text-a11y-base text-[var(--text-muted)]">
-              O lembrete fica salvo com a tarefa. Em versões futuras poderemos avisar no celular ou
-              computador.
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="task-reminder-date" className="block text-a11y-base font-medium text-[var(--text)]">
+                Data da tarefa
+              </label>
+              <input
+                id="task-reminder-date"
+                type="date"
+                className="mt-2 w-full max-w-md min-h-[48px] rounded-xl border-2 border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-a11y-base text-[var(--text)]"
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                autoComplete="off"
+                aria-describedby="task-reminder-help"
+              />
+            </div>
+            <div>
+              <label htmlFor="task-reminder-time" className="block text-a11y-base font-medium text-[var(--text)]">
+                Horário (opcional)
+              </label>
+              <input
+                id="task-reminder-time"
+                type="time"
+                className="mt-2 w-full max-w-md min-h-[48px] rounded-xl border-2 border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-a11y-base text-[var(--text)]"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                autoComplete="off"
+                aria-describedby="task-reminder-help"
+              />
+            </div>
+            <p id="task-reminder-help" className="text-a11y-base text-[var(--text-muted)]">
+              Você pode preencher só a data, só o horário ou os dois. O lembrete fica salvo com a tarefa.
+              Em versões futuras poderemos avisar no celular ou computador.
             </p>
           </div>
           <BigButton type="submit">Salvar tarefa</BigButton>
@@ -139,18 +193,36 @@ export default function TasksPage() {
               >
                 {editingId === task.id ? (
                   <div className="space-y-3">
-                    <input
-                      className="w-full rounded-xl border-2 border-[var(--border-strong)] px-3 py-2 text-a11y-base bg-[var(--surface)]"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      aria-label="Editar título"
-                    />
-                    <textarea
-                      className="min-h-[80px] w-full rounded-xl border-2 border-[var(--border-strong)] px-3 py-2 text-a11y-base advanced-only"
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      aria-label="Editar detalhes"
-                    />
+                    <div>
+                      <label
+                        htmlFor={`task-edit-title-${task.id}`}
+                        className="block text-a11y-base font-medium text-[var(--text)]"
+                      >
+                        Título
+                      </label>
+                      <input
+                        id={`task-edit-title-${task.id}`}
+                        className="mt-2 w-full min-h-[48px] rounded-xl border-2 border-[var(--border-strong)] px-4 py-3 text-a11y-base bg-[var(--surface)] text-[var(--text)]"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`task-edit-desc-${task.id}`}
+                        className="block text-a11y-base font-medium text-[var(--text)]"
+                      >
+                        Passo a passo (opcional)
+                      </label>
+                      <textarea
+                        id={`task-edit-desc-${task.id}`}
+                        placeholder="Descreva o passo a passo da tarefa..."
+                        rows={5}
+                        className="mt-2 min-h-[120px] w-full rounded-xl border-2 border-[var(--border-strong)] px-4 py-3 text-a11y-base leading-relaxed bg-[var(--surface)] text-[var(--text)] placeholder:text-[var(--text-muted)]"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                      />
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <BigButton
                         type="button"
@@ -176,7 +248,7 @@ export default function TasksPage() {
                   <>
                     <h3 className="text-a11y-lg font-semibold text-[var(--text)]">{task.title}</h3>
                     {task.description ? (
-                      <p className="mt-2 text-a11y-base text-[var(--text-muted)] advanced-only">
+                      <p className="mt-3 whitespace-pre-wrap text-a11y-base leading-relaxed text-[var(--text)]">
                         {task.description}
                       </p>
                     ) : null}
@@ -195,7 +267,7 @@ export default function TasksPage() {
                         onClick={() => {
                           setEditingId(task.id);
                           setEditTitle(task.title);
-                          setEditDescription(task.description);
+                          setEditDescription(task.description ?? "");
                         }}
                       >
                         Editar

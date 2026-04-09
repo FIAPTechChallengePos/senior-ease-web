@@ -26,9 +26,15 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
 };
 
-export function BigButton({ className, variant = "primary", children, ...rest }: Props) {
+export function BigButton({
+  className,
+  variant = "primary",
+  type = "button",
+  children,
+  ...rest
+}: Props) {
   return (
-    <button type="button" className={bigButtonClassName(variant, className)} {...rest}>
+    <button type={type} className={bigButtonClassName(variant, className)} {...rest}>
       {children}
     </button>
   );
