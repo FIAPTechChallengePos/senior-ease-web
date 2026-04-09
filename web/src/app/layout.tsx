@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AppNavigation />
           <main
             id="main-content"
-            className="mx-auto max-w-3xl px-4 py-a11y-3"
+            className="mx-auto max-w-6xl px-4 py-a11y-3"
             tabIndex={-1}
           >
             {children}
