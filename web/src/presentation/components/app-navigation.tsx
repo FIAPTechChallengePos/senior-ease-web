@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { useSeniorEaseStore } from "@/presentation/store/seniorease-store";
+import { BigButton } from "@/presentation/components/big-button";
 
 const links = [
   { href: "/", label: "Início", icon: "⌂" },
@@ -13,9 +15,13 @@ const links = [
 
 export function AppNavigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const isAuthenticated = useSeniorEaseStore((s) => s.isAuthenticated);
+  const logout = useSeniorEaseStore((s) => s.logout);
+
   return (
     <nav
-      className="flex flex-wrap gap-a11y-2 border-b-2 border-[var(--border)] bg-[var(--surface)] px-4 py-a11y-3"
+      className="flex flex-wrap items-center gap-a11y-2 border-b-2 border-[var(--border)] bg-[var(--surface)] px-4 py-a11y-3"
       aria-label="Principal"
     >
       {links.map((item) => {
@@ -37,6 +43,36 @@ export function AppNavigation() {
           </Link>
         );
       })}
+
+      <div className="ml-auto flex items-center">
+        {isAuthenticated ? (
+          <BigButton
+            type="button"
+            variant="secondary"
+            className="min-h-[52px]"
+            onClick={() => {
+              logout();
+              router.push("/login");
+            }}
+          >
+            Sair
+          </BigButton>
+        ) : (
+          <Link
+            href="/login"
+            className={clsx(
+              "flex min-h-[52px] min-w-[52px] items-center gap-2 rounded-xl px-4 py-2 text-a11y-base font-semibold",
+              "focus-visible:outline focus-visible:outline-4 focus-visible:outline-[var(--focus-ring)]",
+              pathname === "/login"
+                ? "bg-[var(--nav-active-bg)] font-bold text-[var(--nav-active-fg)]"
+                : "border-2 border-[var(--border-strong)] bg-[var(--surface-muted)] text-[var(--text)]"
+            )}
+          >
+            <span aria-hidden>→</span>
+            <span>Entrar</span>
+          </Link>
+        )}
+      </div>
     </nav>
   );
 }
