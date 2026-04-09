@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useSeniorEaseStore } from "@/presentation/store/seniorease-store";
 import { BigButton } from "@/presentation/components/big-button";
 import { ConfirmDialog } from "@/presentation/components/confirm-dialog";
+import { RequireAuth } from "@/presentation/components/require-auth";
 
-/** Converte data (yyyy-mm-dd) e hora (HH:mm) opcionais em ISO UTC, usando fuso local. Sem data e sem hora: null. Só hora: usa a data de hoje. Só data: meia-noite local. */
 function reminderAtFromParts(datePart: string, timePart: string): string | null {
   const hasDate = datePart.trim() !== "";
   const hasTime = timePart.trim() !== "";
@@ -37,16 +37,15 @@ function reminderAtFromParts(datePart: string, timePart: string): string | null 
   return new Date(y, mo - 1, d, hh, mm, 0, 0).toISOString();
 }
 
-export default function TasksPage() {
+function TasksPageContent() {
   const activeTasks = useSeniorEaseStore((s) => s.activeTasks);
   const completedTasks = useSeniorEaseStore((s) => s.completedTasks);
   const addTask = useSeniorEaseStore((s) => s.addTask);
   const toggleComplete = useSeniorEaseStore((s) => s.toggleComplete);
+  const uncompleteTask = useSeniorEaseStore((s) => s.uncompleteTask);
+  const deleteActiveTask = useSeniorEaseStore((s) => s.deleteActiveTask);
   const editTask = useSeniorEaseStore((s) => s.editTask);
-  const guidedTaskId = useSeniorEaseStore((s) => s.guidedTaskId);
-  const startGuidedFlow = useSeniorEaseStore((s) => s.startGuidedFlow);
   const preferences = useSeniorEaseStore((s) => s.preferences);
-  const pushToast = useSeniorEaseStore((s) => s.pushToast);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -55,11 +54,11 @@ export default function TasksPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingCompleteId, setPendingCompleteId] = useState<string | null>(null);
-  const [guidedStep, setGuidedStep] = useState(0);
+  const [pendingConfirm, setPendingConfirm] = useState<
+    { mode: "complete" | "delete"; id: string } | null
+  >(null);
 
-  const guidedTask = activeTasks.find((t) => t.id === guidedTaskId) ?? null;
+  const confirmOpen = pendingConfirm !== null;
 
   function speak(text: string) {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -83,17 +82,31 @@ export default function TasksPage() {
 
   function requestComplete(id: string) {
     if (preferences.confirmCriticalActions) {
-      setPendingCompleteId(id);
-      setConfirmOpen(true);
+      setPendingConfirm({ mode: "complete", id });
     } else {
       toggleComplete(id);
     }
   }
 
-  function confirmComplete() {
-    if (pendingCompleteId) toggleComplete(pendingCompleteId);
-    setConfirmOpen(false);
-    setPendingCompleteId(null);
+  function requestDelete(id: string) {
+    if (preferences.confirmCriticalActions) {
+      setPendingConfirm({ mode: "delete", id });
+    } else {
+      deleteActiveTask(id);
+      setEditingId((e) => (e === id ? null : e));
+    }
+  }
+
+  function confirmPending() {
+    if (!pendingConfirm) return;
+    const { mode, id } = pendingConfirm;
+    if (mode === "complete") {
+      toggleComplete(id);
+    } else {
+      deleteActiveTask(id);
+      setEditingId((e) => (e === id ? null : e));
+    }
+    setPendingConfirm(null);
   }
 
   return (
@@ -101,7 +114,7 @@ export default function TasksPage() {
       <header>
         <h1 className="text-a11y-xl font-bold text-[var(--text)]">Organizador de atividades</h1>
         <p className="mt-2 text-a11y-base text-[var(--text-muted)]">
-          Crie tarefas com poucos toques. Você pode seguir um passo a passo para concluir cada uma.
+          Crie tarefas com poucos toques, edite quando precisar e marque como feitas quando concluir.
         </p>
       </header>
 
@@ -242,6 +255,14 @@ export default function TasksPage() {
                       <BigButton type="button" variant="secondary" onClick={() => setEditingId(null)}>
                         Cancelar
                       </BigButton>
+                      <BigButton
+                        type="button"
+                        variant="ghost"
+                        onClick={() => requestDelete(task.id)}
+                        aria-label={`Excluir tarefa: ${task.title}`}
+                      >
+                        Excluir tarefa
+                      </BigButton>
                     </div>
                   </div>
                 ) : (
@@ -274,22 +295,19 @@ export default function TasksPage() {
                       </BigButton>
                       <BigButton
                         type="button"
-                        variant="secondary"
-                        onClick={() => {
-                          startGuidedFlow(task.id);
-                          setGuidedStep(0);
-                          pushToast("Modo guiado: siga os passos na tela.", "info");
-                        }}
-                      >
-                        Passo a passo
-                      </BigButton>
-                      <BigButton
-                        type="button"
                         variant="ghost"
                         className="advanced-only"
                         onClick={() => speak(`${task.title}. ${task.description || ""}`)}
                       >
                         Ouvir texto
+                      </BigButton>
+                      <BigButton
+                        type="button"
+                        variant="ghost"
+                        onClick={() => requestDelete(task.id)}
+                        aria-label={`Excluir tarefa: ${task.title}`}
+                      >
+                        Excluir tarefa
                       </BigButton>
                     </div>
                   </>
@@ -312,19 +330,35 @@ export default function TasksPage() {
             Quando você marcar uma tarefa como feita, ela aparece aqui.
           </p>
         ) : (
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-4 space-y-4">
             {completedTasks
               .slice()
               .reverse()
               .map((t) => (
-                <li key={t.id} className="text-a11y-base text-[var(--text)]">
-                  <span className="font-medium">{t.title}</span>
-                  {t.completedAt ? (
-                    <span className="text-[var(--text-muted)]">
-                      {" "}
-                      — concluída em {new Date(t.completedAt).toLocaleString("pt-BR")}
-                    </span>
-                  ) : null}
+                <li
+                  key={t.id}
+                  className="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] p-4 text-a11y-base text-[var(--text)]"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <span className="font-medium">{t.title}</span>
+                      {t.completedAt ? (
+                        <span className="text-[var(--text-muted)]">
+                          {" "}
+                          — concluída em {new Date(t.completedAt).toLocaleString("pt-BR")}
+                        </span>
+                      ) : null}
+                    </div>
+                    <BigButton
+                      type="button"
+                      variant="secondary"
+                      className="shrink-0 sm:min-w-[12rem]"
+                      onClick={() => uncompleteTask(t.id)}
+                      aria-label={`Desconcluir tarefa: ${t.title}`}
+                    >
+                      Desconcluir tarefa
+                    </BigButton>
+                  </div>
                 </li>
               ))}
           </ul>
@@ -333,71 +367,25 @@ export default function TasksPage() {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Confirmar conclusão"
-        message="Deseja marcar esta tarefa como concluída? Você pode ver o histórico abaixo depois."
-        confirmLabel="Sim, concluir"
+        title={pendingConfirm?.mode === "delete" ? "Excluir tarefa" : "Confirmar conclusão"}
+        message={
+          pendingConfirm?.mode === "delete"
+            ? "Esta tarefa será apagada. Você pode criar outra depois, se precisar."
+            : "Deseja marcar esta tarefa como concluída? Você pode ver o histórico abaixo depois."
+        }
+        confirmLabel={pendingConfirm?.mode === "delete" ? "Sim, excluir" : "Sim, concluir"}
         cancelLabel="Não"
-        onConfirm={confirmComplete}
-        onCancel={() => {
-          setConfirmOpen(false);
-          setPendingCompleteId(null);
-        }}
+        onConfirm={confirmPending}
+        onCancel={() => setPendingConfirm(null)}
       />
-
-      {guidedTask ? (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="guided-title"
-        >
-          <div className="w-full max-w-lg rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-6 shadow-xl">
-            <h2 id="guided-title" className="text-a11y-xl font-bold text-[var(--text)]">
-              Passo a passo
-            </h2>
-            <p className="mt-4 text-a11y-base text-[var(--text)]">
-              {guidedStep === 0 && `Tarefa: ${guidedTask.title}. Leia com calma o que precisa ser feito.`}
-              {guidedStep === 1 &&
-                (guidedTask.description ||
-                  "Se não houver detalhes, faça a tarefa no seu ritmo. Quando terminar, avance.")}
-              {guidedStep === 2 && "Quando estiver pronto, marque como feita para registrar o sucesso."}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {guidedStep > 0 ? (
-                <BigButton type="button" variant="secondary" onClick={() => setGuidedStep((s) => s - 1)}>
-                  Voltar
-                </BigButton>
-              ) : null}
-              {guidedStep < 2 ? (
-                <BigButton type="button" onClick={() => setGuidedStep((s) => s + 1)}>
-                  Próximo passo
-                </BigButton>
-              ) : (
-                <BigButton
-                  type="button"
-                  onClick={() => {
-                    toggleComplete(guidedTask.id);
-                    startGuidedFlow(null);
-                    setGuidedStep(0);
-                  }}
-                >
-                  Concluir tarefa
-                </BigButton>
-              )}
-              <BigButton
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  startGuidedFlow(null);
-                  setGuidedStep(0);
-                }}
-              >
-                Sair do passo a passo
-              </BigButton>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <RequireAuth>
+      <TasksPageContent />
+    </RequireAuth>
   );
 }

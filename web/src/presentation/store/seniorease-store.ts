@@ -11,7 +11,9 @@ import { loadAccessibilityPreferences } from "@/application/use-cases/load-acces
 import { saveAccessibilityPreferences } from "@/application/use-cases/save-accessibility-preferences";
 import { createTask } from "@/application/use-cases/create-task";
 import { completeTask } from "@/application/use-cases/complete-task";
+import { uncompleteTask as applyUncompleteTask } from "@/application/use-cases/uncomplete-task";
 import { updateTask } from "@/application/use-cases/update-task";
+import { deleteActiveTask as applyDeleteActiveTask } from "@/application/use-cases/delete-active-task";
 import { listActiveTasks, listCompletedTasks } from "@/application/use-cases/list-tasks";
 
 const accessibilityRepo = new LocalAccessibilityRepository();
@@ -26,7 +28,6 @@ type State = {
   activeTasks: Task[];
   completedTasks: Task[];
   toasts: ToastMessage[];
-  guidedTaskId: string | null;
   hydrated: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
@@ -36,11 +37,12 @@ type State = {
   logout: () => void;
   addTask: (input: { title: string; description?: string; reminderAt?: string | null }) => boolean;
   toggleComplete: (id: string) => void;
+  uncompleteTask: (id: string) => void;
+  deleteActiveTask: (id: string) => void;
   editTask: (
     id: string,
     patch: Partial<Pick<Task, "title" | "description" | "reminderAt">>
   ) => boolean;
-  startGuidedFlow: (id: string | null) => void;
   pushToast: (text: string, variant?: ToastMessage["variant"]) => void;
   dismissToast: (id: string) => void;
 };
@@ -60,7 +62,6 @@ export const useSeniorEaseStore = create<State>()(
       activeTasks: [],
       completedTasks: [],
       toasts: [],
-      guidedTaskId: null,
       hydrated: false,
       isAuthenticated: false,
       user: null,
@@ -118,6 +119,27 @@ export const useSeniorEaseStore = create<State>()(
         }
       },
 
+      uncompleteTask: (id) => {
+        const ok = applyUncompleteTask(taskRepo, id);
+        if (ok) {
+          set({
+            activeTasks: listActiveTasks(taskRepo),
+            completedTasks: listCompletedTasks(taskRepo),
+          });
+          get().pushToast("Tarefa voltou para em aberto.", "success");
+        }
+      },
+
+      deleteActiveTask: (id) => {
+        const ok = applyDeleteActiveTask(taskRepo, id);
+        if (!ok) return;
+        set({
+          activeTasks: listActiveTasks(taskRepo),
+          completedTasks: listCompletedTasks(taskRepo),
+        });
+        get().pushToast("Tarefa excluída.", "success");
+      },
+
       editTask: (id, patch) => {
         const result = updateTask(taskRepo, id, patch);
         if (!result.ok) {
@@ -131,8 +153,6 @@ export const useSeniorEaseStore = create<State>()(
         get().pushToast("Alterações salvas.", "success");
         return true;
       },
-
-      startGuidedFlow: (id) => set({ guidedTaskId: id }),
 
       pushToast: (text, variant = "info") => {
         const id = `toast_${++toastSeq}`;
