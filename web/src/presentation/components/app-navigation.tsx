@@ -46,7 +46,7 @@ export function AppNavigation() {
           })
         : (
             <p className="max-w-[min(100%,28rem)] px-1 text-a11y-base text-[var(--text-muted)]">
-              Inicie sessão para aceder a Início, Ajustes, Tarefas e Perfil.
+              Inicie sua sessão
             </p>
           )}
 
