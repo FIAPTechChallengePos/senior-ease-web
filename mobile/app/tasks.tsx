@@ -77,26 +77,31 @@ function TasksScreenContent() {
           ]}
           accessibilityLabel="Título da tarefa"
         />
-        {preferences.interfaceMode === "advanced" ? (
-          <>
-            <Text style={[styles.label, { color: colors.text, fontSize: 16 * scale, marginTop: gap }]}>
-              Detalhes
-            </Text>
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              placeholder="Opcional"
-              placeholderTextColor="#888"
-              style={[
-                styles.input,
-                styles.textArea,
-                { borderColor: colors.border, color: colors.text, fontSize: 18 * scale },
-              ]}
-              accessibilityLabel="Detalhes da tarefa"
-            />
-          </>
-        ) : null}
+        <Text style={[styles.label, { color: colors.text, fontSize: 16 * scale, marginTop: gap }]}>
+          Passo a passo{" "}
+          <Text style={{ fontWeight: "400", color: colors.text, opacity: 0.85 }}>(opcional)</Text>
+        </Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          placeholder="Descreva o passo a passo da tarefa..."
+          placeholderTextColor="#888"
+          textAlignVertical="top"
+          style={[
+            styles.input,
+            styles.textArea,
+            {
+              borderColor: colors.border,
+              color: colors.text,
+              fontSize: 18 * scale,
+              lineHeight: Math.round(26 * scale),
+              minHeight: Math.max(120, Math.round(100 * scale)),
+            },
+          ]}
+          accessibilityLabel="Passo a passo da tarefa, opcional"
+          accessibilityHint="Campo opcional para escrever instruções detalhadas, um passo por linha se quiser"
+        />
         <View style={{ marginTop: gap }}>
           <BigPressable label="Salvar tarefa" colors={colors} scale={scale} onPress={() => void onAdd()} />
         </View>
@@ -117,8 +122,10 @@ function TasksScreenContent() {
             ]}
           >
             <Text style={{ fontSize: 19 * scale, fontWeight: "700", color: colors.text }}>{t.title}</Text>
-            {t.description && preferences.interfaceMode === "advanced" ? (
-              <Text style={{ marginTop: 8, fontSize: 17 * scale, color: colors.text }}>{t.description}</Text>
+            {t.description.trim() !== "" ? (
+              <Text style={{ marginTop: 10, fontSize: 17 * scale, lineHeight: Math.round(24 * scale), color: colors.text }}>
+                {t.description}
+              </Text>
             ) : null}
             <View style={{ marginTop: gap }}>
               <BigPressable
