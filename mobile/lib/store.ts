@@ -19,6 +19,7 @@ type State = {
   logout: () => void;
   addTask: (title: string, description: string, reminderAt: string | null) => Promise<void>;
   completeTask: (id: string) => Promise<void>;
+  uncompleteTask: (id: string) => Promise<void>;
 };
 
 function newId(): string {
@@ -77,6 +78,14 @@ export const useStore = create<State>()(
         const now = new Date().toISOString();
         const tasks = get().tasks.map((x) =>
           x.id === id ? { ...x, completed: true, completedAt: now } : x
+        );
+        await saveTasks(tasks);
+        set({ tasks });
+      },
+
+      uncompleteTask: async (id) => {
+        const tasks = get().tasks.map((x) =>
+          x.id === id ? { ...x, completed: false, completedAt: null } : x
         );
         await saveTasks(tasks);
         set({ tasks });

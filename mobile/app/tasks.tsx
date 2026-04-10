@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  AccessibilityInfo,
 } from "react-native";
 import { useStore } from "@/lib/store";
 import { colorsFor, scaleForFont, spacingFor } from "@/lib/theme";
@@ -25,6 +26,7 @@ function TasksScreenContent() {
   const tasks = useStore((s) => s.tasks);
   const addTask = useStore((s) => s.addTask);
   const completeTask = useStore((s) => s.completeTask);
+  const uncompleteTask = useStore((s) => s.uncompleteTask);
   const colors = colorsFor(preferences);
   const scale = scaleForFont(preferences);
   const gap = spacingFor(preferences);
@@ -46,16 +48,31 @@ function TasksScreenContent() {
     setDescription("");
   }
 
-  function onComplete(id: string, label: string) {
-    const go = () => void completeTask(id);
+  function runCriticalAction(
+    alertTitle: string,
+    message: string,
+    onConfirm: () => void | Promise<void>
+  ) {
+    const go = () => void Promise.resolve(onConfirm());
     if (preferences.confirmCriticalActions) {
-      Alert.alert("Concluir tarefa", `Marcar "${label}" como feita?`, [
+      Alert.alert(alertTitle, message, [
         { text: "Cancelar", style: "cancel" },
         { text: "Sim", onPress: go },
       ]);
     } else {
       go();
     }
+  }
+
+  function onComplete(id: string, label: string) {
+    runCriticalAction("Concluir tarefa", `Marcar "${label}" como feita?`, () => completeTask(id));
+  }
+
+  function onUncomplete(id: string, label: string) {
+    runCriticalAction("Desconcluir tarefa", `Voltar "${label}" para em aberto?`, async () => {
+      await uncompleteTask(id);
+      AccessibilityInfo.announceForAccessibility?.("Tarefa desmarcada. Voltou para em aberto.");
+    });
   }
 
   return (
@@ -151,9 +168,43 @@ function TasksScreenContent() {
         <Text style={{ fontSize: 17 * scale, color: colors.text }}>Ainda não há histórico.</Text>
       ) : (
         [...done].reverse().map((t) => (
-          <Text key={t.id} style={{ fontSize: 17 * scale, color: colors.text, marginBottom: 8 }}>
-            • {t.title}
-          </Text>
+          <View
+            key={t.id}
+            style={[
+              styles.card,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                marginBottom: gap,
+                padding: gap + 8,
+              },
+            ]}
+          >
+            <Text style={{ fontSize: 18 * scale, fontWeight: "700", color: colors.text }}>{t.title}</Text>
+            {t.description.trim() !== "" ? (
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 16 * scale,
+                  lineHeight: Math.round(22 * scale),
+                  color: colors.text,
+                  opacity: 0.92,
+                }}
+              >
+                {t.description}
+              </Text>
+            ) : null}
+            <View style={{ marginTop: gap }}>
+              <BigPressable
+                label="Desconcluir"
+                accessibilityLabelOverride="Desconcluir tarefa"
+                variant="secondary"
+                colors={colors}
+                scale={scale}
+                onPress={() => onUncomplete(t.id, t.title)}
+              />
+            </View>
+          </View>
         ))
       )}
     </ScrollView>
