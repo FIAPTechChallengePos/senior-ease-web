@@ -20,6 +20,7 @@ type State = {
   addTask: (title: string, description: string, reminderAt: string | null) => Promise<void>;
   completeTask: (id: string) => Promise<void>;
   uncompleteTask: (id: string) => Promise<void>;
+  deleteActiveTask: (id: string) => Promise<void>;
 };
 
 function newId(): string {
@@ -87,6 +88,15 @@ export const useStore = create<State>()(
         const tasks = get().tasks.map((x) =>
           x.id === id ? { ...x, completed: false, completedAt: null } : x
         );
+        await saveTasks(tasks);
+        set({ tasks });
+      },
+
+      deleteActiveTask: async (id) => {
+        const list = get().tasks;
+        const target = list.find((x) => x.id === id);
+        if (!target || target.completed) return;
+        const tasks = list.filter((x) => x.id !== id);
         await saveTasks(tasks);
         set({ tasks });
       },

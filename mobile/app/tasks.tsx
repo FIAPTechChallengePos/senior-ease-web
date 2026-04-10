@@ -27,6 +27,7 @@ function TasksScreenContent() {
   const addTask = useStore((s) => s.addTask);
   const completeTask = useStore((s) => s.completeTask);
   const uncompleteTask = useStore((s) => s.uncompleteTask);
+  const deleteActiveTask = useStore((s) => s.deleteActiveTask);
   const colors = colorsFor(preferences);
   const scale = scaleForFont(preferences);
   const gap = spacingFor(preferences);
@@ -73,6 +74,17 @@ function TasksScreenContent() {
       await uncompleteTask(id);
       AccessibilityInfo.announceForAccessibility?.("Tarefa desmarcada. Voltou para em aberto.");
     });
+  }
+
+  function onDeleteActive(id: string, label: string) {
+    runCriticalAction(
+      "Excluir tarefa",
+      `A tarefa "${label}" será apagada. Você pode criar outra depois, se precisar.`,
+      async () => {
+        await deleteActiveTask(id);
+        AccessibilityInfo.announceForAccessibility?.("Tarefa excluída.");
+      }
+    );
   }
 
   return (
@@ -144,12 +156,20 @@ function TasksScreenContent() {
                 {t.description}
               </Text>
             ) : null}
-            <View style={{ marginTop: gap }}>
+            <View style={{ marginTop: gap, gap }}>
               <BigPressable
                 label="Marcar como feita"
                 colors={colors}
                 scale={scale}
                 onPress={() => onComplete(t.id, t.title)}
+              />
+              <BigPressable
+                label="Excluir"
+                accessibilityLabelOverride="Excluir tarefa"
+                variant="secondary"
+                colors={colors}
+                scale={scale}
+                onPress={() => onDeleteActive(t.id, t.title)}
               />
             </View>
           </View>
