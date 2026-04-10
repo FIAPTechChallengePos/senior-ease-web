@@ -9,6 +9,7 @@ type Props = { children: ReactNode };
 export function RequireAuth({ children }: Props) {
   const router = useRouter();
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const dataHydrated = useStore((s) => s.hydrated);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export function RequireAuth({ children }: Props) {
     }
   }, [ready, isAuthenticated, router]);
 
-  if (!ready) {
+  if (!ready || !dataHydrated) {
     return (
       <View
         style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 12, padding: 24 }}

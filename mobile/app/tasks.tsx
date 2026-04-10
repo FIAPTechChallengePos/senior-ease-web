@@ -90,7 +90,7 @@ function TasksScreenContent() {
   return (
     <ScrollView
       style={[styles.scroll, { backgroundColor: colors.bg }]}
-      keyboardShouldPersistTaps="handled"
+      keyboardShouldPersistTaps="always"
     >
       <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card, marginBottom: gap }]}>
         <Text style={[styles.h2, { color: colors.text, fontSize: 20 * scale }]}>Nova tarefa</Text>

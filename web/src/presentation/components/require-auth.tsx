@@ -13,6 +13,7 @@ type Props = { children: ReactNode };
 export function RequireAuth({ children }: Props) {
   const router = useRouter();
   const isAuthenticated = useSeniorEaseStore((s) => s.isAuthenticated);
+  const dataHydrated = useSeniorEaseStore((s) => s.hydrated);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export function RequireAuth({ children }: Props) {
     }
   }, [ready, isAuthenticated, router]);
 
-  if (!ready) {
+  if (!ready || !dataHydrated) {
     return (
       <div
         className="flex min-h-[40vh] items-center justify-center text-a11y-base text-[var(--text-muted)]"

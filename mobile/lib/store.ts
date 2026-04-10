@@ -37,8 +37,12 @@ export const useStore = create<State>()(
       user: null,
 
       hydrate: async () => {
-        const [preferences, tasks] = await Promise.all([loadPreferences(), loadTasks()]);
-        set({ preferences, tasks, hydrated: true });
+        try {
+          const [preferences, tasks] = await Promise.all([loadPreferences(), loadTasks()]);
+          set({ preferences, tasks, hydrated: true });
+        } catch {
+          set({ preferences: { ...DEFAULT_PREFERENCES }, tasks: [], hydrated: true });
+        }
       },
 
       setPreferences: async (patch) => {
