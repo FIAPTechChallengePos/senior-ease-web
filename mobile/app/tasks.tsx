@@ -1,17 +1,10 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Alert,
-  AccessibilityInfo,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, AccessibilityInfo, Platform } from "react-native";
 import { useStore } from "@/lib/store";
 import { colorsFor, scaleForFont, spacingFor } from "@/lib/theme";
 import { BigPressable } from "@/components/BigPressable";
 import { RequireAuth } from "@/components/RequireAuth";
+import { runCriticalAction } from "@/lib/confirm-critical-action";
 
 export default function TasksScreen() {
   return (
@@ -41,7 +34,11 @@ function TasksScreenContent() {
   async function onAdd() {
     const t = title.trim();
     if (!t) {
-      Alert.alert("Título obrigatório", "Escreva um título antes de salvar.");
+      if (Platform.OS === "web") {
+        globalThis.alert?.("Escreva um título antes de salvar.");
+      } else {
+        Alert.alert("Título obrigatório", "Escreva um título antes de salvar.");
+      }
       return;
     }
     await addTask(title, description, null);
@@ -49,37 +46,32 @@ function TasksScreenContent() {
     setDescription("");
   }
 
-  function runCriticalAction(
-    alertTitle: string,
-    message: string,
-    onConfirm: () => void | Promise<void>
-  ) {
-    const go = () => void Promise.resolve(onConfirm());
-    if (preferences.confirmCriticalActions) {
-      Alert.alert(alertTitle, message, [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Sim", onPress: go },
-      ]);
-    } else {
-      go();
-    }
-  }
-
   function onComplete(id: string, label: string) {
-    runCriticalAction("Concluir tarefa", `Marcar "${label}" como feita?`, () => completeTask(id));
+    runCriticalAction(
+      preferences.confirmCriticalActions,
+      "Concluir tarefa",
+      `Marcar tarefa como feita?`,
+      () => completeTask(id)
+    );
   }
 
   function onUncomplete(id: string, label: string) {
-    runCriticalAction("Desconcluir tarefa", `Voltar "${label}" para em aberto?`, async () => {
-      await uncompleteTask(id);
-      AccessibilityInfo.announceForAccessibility?.("Tarefa desmarcada. Voltou para em aberto.");
-    });
+    runCriticalAction(
+      preferences.confirmCriticalActions,
+      "Desconcluir tarefa",
+      `Voltar tarefa marcada como feita para em aberto?`,
+      async () => {
+        await uncompleteTask(id);
+        AccessibilityInfo.announceForAccessibility?.("Tarefa desmarcada. Voltou para em aberto.");
+      }
+    );
   }
 
   function onDeleteActive(id: string, label: string) {
     runCriticalAction(
+      preferences.confirmCriticalActions,
       "Excluir tarefa",
-      `A tarefa "${label}" será apagada. Você pode criar outra depois, se precisar.`,
+      `A tarefa será apagada. Você pode criar outra depois, se precisar.`,
       async () => {
         await deleteActiveTask(id);
         AccessibilityInfo.announceForAccessibility?.("Tarefa excluída.");

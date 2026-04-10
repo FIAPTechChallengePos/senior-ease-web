@@ -1,5 +1,6 @@
 import { forwardRef, type ComponentRef } from "react";
 import {
+  Platform,
   Pressable,
   Text,
   type PressableProps,
@@ -28,6 +29,7 @@ export const BigPressable = forwardRef<ComponentRef<typeof Pressable>, Props>(fu
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    ...(Platform.OS === "web" ? ({ cursor: "pointer", userSelect: "none" } as const) : null),
   };
   const vStyle: StyleProp<ViewStyle> =
     variant === "primary"
