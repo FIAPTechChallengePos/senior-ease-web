@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, Switch } from "react-native";
 import { useStore } from "@/lib/store";
 import { colorsFor, scaleForFont, spacingFor } from "@/lib/theme";
 import { BigPressable } from "@/components/BigPressable";
+import { RequireAuth } from "@/components/RequireAuth";
 import type { AccessibilityPreferences } from "@/lib/types";
 
 const FONT_OPTS: { key: AccessibilityPreferences["fontSize"]; label: string }[] = [
@@ -12,6 +13,14 @@ const FONT_OPTS: { key: AccessibilityPreferences["fontSize"]; label: string }[] 
 ];
 
 export default function PersonalizeScreen() {
+  return (
+    <RequireAuth>
+      <PersonalizeScreenContent />
+    </RequireAuth>
+  );
+}
+
+function PersonalizeScreenContent() {
   const preferences = useStore((s) => s.preferences);
   const setPreferences = useStore((s) => s.setPreferences);
   const colors = colorsFor(preferences);

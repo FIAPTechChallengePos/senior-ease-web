@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import { useStore } from "@/lib/store";
 import { colorsFor, scaleForFont, spacingFor } from "@/lib/theme";
 import { BigPressable } from "@/components/BigPressable";
+import { RequireAuth } from "@/components/RequireAuth";
 
 const L: Record<string, string> = {
   small: "Pequeno",
@@ -16,8 +17,17 @@ const L: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  return (
+    <RequireAuth>
+      <ProfileScreenContent />
+    </RequireAuth>
+  );
+}
+
+function ProfileScreenContent() {
   const preferences = useStore((s) => s.preferences);
   const tasks = useStore((s) => s.tasks);
+  const user = useStore((s) => s.user);
   const colors = colorsFor(preferences);
   const scale = scaleForFont(preferences);
   const gap = spacingFor(preferences);
@@ -28,7 +38,12 @@ export default function ProfileScreen() {
     <ScrollView style={[styles.scroll, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card, marginBottom: gap }]}>
         <Text style={[styles.h1, { color: colors.text, fontSize: 22 * scale }]}>Resumo</Text>
-        <Text style={[styles.row, { color: colors.text, fontSize: 17 * scale, marginTop: gap }]}>
+        {user ? (
+          <Text style={[styles.row, { color: colors.text, fontSize: 17 * scale, marginTop: gap }]}>
+            Conta: {user.name}
+          </Text>
+        ) : null}
+        <Text style={[styles.row, { color: colors.text, fontSize: 17 * scale }]}>
           Letra: {L[preferences.fontSize]}
         </Text>
         <Text style={[styles.row, { color: colors.text, fontSize: 17 * scale }]}>

@@ -3,9 +3,19 @@ import { Link } from "expo-router";
 import { useStore } from "@/lib/store";
 import { colorsFor, scaleForFont, spacingFor } from "@/lib/theme";
 import { BigPressable } from "@/components/BigPressable";
+import { RequireAuth } from "@/components/RequireAuth";
 
 export default function HomeScreen() {
+  return (
+    <RequireAuth>
+      <HomeContent />
+    </RequireAuth>
+  );
+}
+
+function HomeContent() {
   const preferences = useStore((s) => s.preferences);
+  const user = useStore((s) => s.user);
   const colors = colorsFor(preferences);
   const scale = scaleForFont(preferences);
   const gap = spacingFor(preferences);
@@ -14,8 +24,13 @@ export default function HomeScreen() {
     <ScrollView style={[styles.scroll, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card, marginBottom: gap }]}>
         <Text style={[styles.h1, { color: colors.text, fontSize: 24 * scale }]}>Bem-vindo</Text>
+        {user ? (
+          <Text style={[styles.p, { color: colors.text, fontSize: 18 * scale, marginTop: gap }]}>
+            Olá, {user.name}.
+          </Text>
+        ) : null}
         <Text style={[styles.p, { color: colors.text, fontSize: 18 * scale, marginTop: gap }]}>
-          Toque nos botões abaixo. Letras e contraste vêm dos ajustes salvos no aparelho.
+          Toque nos botões abaixo. Letras e contraste vêm dos ajustes salvos neste aparelho.
         </Text>
       </View>
       <View style={{ gap }}>

@@ -10,8 +10,17 @@ import {
 import { useStore } from "@/lib/store";
 import { colorsFor, scaleForFont, spacingFor } from "@/lib/theme";
 import { BigPressable } from "@/components/BigPressable";
+import { RequireAuth } from "@/components/RequireAuth";
 
 export default function TasksScreen() {
+  return (
+    <RequireAuth>
+      <TasksScreenContent />
+    </RequireAuth>
+  );
+}
+
+function TasksScreenContent() {
   const preferences = useStore((s) => s.preferences);
   const tasks = useStore((s) => s.tasks);
   const addTask = useStore((s) => s.addTask);
@@ -27,6 +36,11 @@ export default function TasksScreen() {
   const done = tasks.filter((t) => t.completed);
 
   async function onAdd() {
+    const t = title.trim();
+    if (!t) {
+      Alert.alert("Título obrigatório", "Escreva um título antes de salvar.");
+      return;
+    }
     await addTask(title, description, null);
     setTitle("");
     setDescription("");
@@ -45,7 +59,10 @@ export default function TasksScreen() {
   }
 
   return (
-    <ScrollView style={[styles.scroll, { backgroundColor: colors.bg }]}>
+    <ScrollView
+      style={[styles.scroll, { backgroundColor: colors.bg }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card, marginBottom: gap }]}>
         <Text style={[styles.h2, { color: colors.text, fontSize: 20 * scale }]}>Nova tarefa</Text>
         <Text style={[styles.label, { color: colors.text, fontSize: 16 * scale }]}>Título</Text>

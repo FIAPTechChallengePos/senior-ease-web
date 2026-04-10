@@ -1,3 +1,4 @@
+import { forwardRef, type ComponentRef } from "react";
 import {
   Pressable,
   Text,
@@ -14,14 +15,10 @@ type Props = PressableProps & {
   scale: number;
 };
 
-export function BigPressable({
-  label,
-  variant = "primary",
-  colors,
-  scale,
-  style,
-  ...rest
-}: Props) {
+export const BigPressable = forwardRef<ComponentRef<typeof Pressable>, Props>(function BigPressable(
+  { label, variant = "primary", colors, scale, style, ...rest },
+  ref
+) {
   const base: StyleProp<ViewStyle> = {
     minHeight: 52,
     paddingHorizontal: 20,
@@ -45,12 +42,13 @@ export function BigPressable({
   };
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [base, vStyle, pressed && { opacity: 0.9 }, style]}
+      style={({ pressed }) => [base, vStyle, pressed && { opacity: 0.9 }, style] as StyleProp<ViewStyle>[]}
       {...rest}
     >
       <Text style={textStyle}>{label}</Text>
     </Pressable>
   );
-}
+});
